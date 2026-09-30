@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -81,8 +82,72 @@ def _paint(text: str, *styles: str, enabled: bool = True) -> str:
     return "".join(styles) + text + _RESET
 
 
+# --- untrusted text ------------------------------------------------------
+# Commands, paths, URLs, queries, the slug and the cwd all come from the
+# transcript, which the agent under review wrote. Before any of it is shown:
+#
+# _safe turns terminal control characters (C0 except newline and tab, DEL,
+# C1) and bidi overrides into visible \xNN / \uNNNN text, so an ESC or OSC
+# sequence cannot move the cursor, erase the report or set the clipboard.
+#
+# _redact masks secret-shaped values (URL passwords, Authorization / Bearer
+# values, token= / key= / password=, known token prefixes) as ***. The
+# Markdown and JSON reports get pasted into tickets during an incident. The
+# command stays recognisable and the event index still points at the
+# original line; classification ran on the real text, so verdicts don't move.
+
+_CONTROL_RE = re.compile(
+    r"[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
+
+
+def _escape_control(match: re.Match) -> str:
+    code = ord(match.group())
+    return f"\\x{code:02x}" if code < 0x100 else f"\\u{code:04x}"
+
+
+def _safe(text: str) -> str:
+    return _CONTROL_RE.sub(_escape_control, text)
+
+
+_REDACTIONS = [
+    # scheme://user:password@host -> scheme://user:***@host
+    (re.compile(r"(://[^/@\s:]*:)[^/\s]+@"), r"\1***@"),
+    # Authorization: Bearer <value>, and API key headers
+    (re.compile(r"(?i)\b(authorization\s*:\s*(?:(?:bearer|basic|token|bot|digest)\s+)?)"
+                r"[^\s'\"]+"), r"\1***"),
+    (re.compile(r"(?i)\b((?:x-api-key|api-key|x-auth-token|private-token)\s*:\s*)"
+                r"[^\s'\"]+"), r"\1***"),
+    # Bearer <token> outside a header (token-like values only, not prose)
+    (re.compile(r"(?i)\b(bearer\s+)(?=[\w.~+/=-]*\d)[\w.~+/=-]{8,}"), r"\1***"),
+    # password=, token=, secret=, key= (AWS_SECRET_ACCESS_KEY=, ?key=, ...)
+    (re.compile(r"(?i)(?<![a-z0-9])((?:password|passwd|pass|token|secret|"
+                r"api[_-]?key|apikey|key)=['\"]?)[^\s&'\"]+"), r"\1***"),
+    # well-known token shapes
+    (re.compile(r"(?<![A-Za-z0-9])(gh[pousr]_|github_pat_|glpat-|sk-|sk_live_|"
+                r"sk_test_|rk_live_|xox[abprs]-|AIza)[\w-]{16,}"), r"\1***"),
+    (re.compile(r"(?<![A-Za-z0-9])(AKIA|ASIA)[0-9A-Z]{16}(?![0-9A-Za-z])"), r"\1***"),
+]
+
+# mysql -p<password> and curl -u user:<password>: other tools reuse these flag
+# shapes (docker -u uid:gid), so they are masked only next to that client.
+_MYSQL_RE = re.compile(r"(?i)\b(?:mysql|mysqldump|mysqladmin|mariadb)\b")
+_MYSQL_PW_RE = re.compile(r"(?<!\S)(-p['\"]?)[^\s'\"]+")
+_CURL_RE = re.compile(r"(?i)\bcurl\b")
+_CURL_USER_RE = re.compile(r"(?<!\S)((?:-u|--user)(?:=|\s+)?['\"]?[^\s:'\"]*:)[^\s'\"]+")
+
+
+def _redact(text: str) -> str:
+    for pattern, repl in _REDACTIONS:
+        text = pattern.sub(repl, text)
+    if _MYSQL_RE.search(text):
+        text = _MYSQL_PW_RE.sub(r"\1***", text)
+    if _CURL_RE.search(text):
+        text = _CURL_USER_RE.sub(r"\1***", text)
+    return text
+
+
 def _short(text: str, width: int = 88) -> str:
-    text = " ".join(text.split())
+    text = _safe(" ".join(text.split()))
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
@@ -97,8 +162,8 @@ def render_terminal(report: BlastReport, color: bool | None = None) -> str:
     out(_paint("  agent-blast-radius", _BOLD, _CYAN, enabled=color)
         + _paint(": what did this agent touch, and what's irreversible?",
                  _DIM, enabled=color))
-    out(_paint(f"  session {title} · {len(session.events)} events"
-               + (f" · {session.cwd}" if session.cwd else ""),
+    out(_paint(f"  session {_safe(title)} · {len(session.events)} events"
+               + (f" · {_safe(session.cwd)}" if session.cwd else ""),
                _DIM, enabled=color))
     out("")
 
@@ -120,8 +185,8 @@ def render_terminal(report: BlastReport, color: bool | None = None) -> str:
         for action in headlines:
             sev_style, sev_label = _SEVERITY_STYLE[action.severity]
             out(f"  {_paint('● ' + sev_label.ljust(4), sev_style, _BOLD, enabled=color)}"
-                f" {_short(action.target)}")
-            out(_paint(f"    └─ {action.detail}  [event {action.event_index}]",
+                f" {_short(_redact(action.target))}")
+            out(_paint(f"    └─ {_safe(action.detail)}  [event {action.event_index}]",
                        _DIM, enabled=color))
     else:
         out(_paint("  none: nothing the agent did is unrecoverable.",
@@ -158,7 +223,7 @@ def _format_action_line(action: Action, color: bool) -> str:
     escape = _paint(" ⚠path-escape", _RED, enabled=color) if action.path_escape else ""
     return (f"{_paint(mark, mark_style, enabled=color)} "
             f"{_paint(sev_label.ljust(4), sev_style, enabled=color)} "
-            f"{op}{_short(action.target, 70)}  "
+            f"{op}{_short(_redact(action.target), 70)}  "
             f"{rev}{escape}")
 
 
@@ -167,8 +232,8 @@ def _format_action_line(action: Action, color: bool) -> str:
 def _action_dict(action: Action) -> dict:
     return {
         "category": action.category.value,
-        "target": action.target,
-        "raw": action.raw,
+        "target": _redact(action.target),
+        "raw": _redact(action.raw),
         "event_index": action.event_index,
         "reversibility": action.reversibility.value,
         "severity": action.severity.value,
@@ -200,8 +265,8 @@ def render_markdown(report: BlastReport) -> str:
     lines = [
         "# agent-blast-radius report",
         "",
-        f"- **Transcript:** `{Path(session.path).name}`",
-        f"- **Project:** `{session.cwd or 'unknown'}`",
+        f"- **Transcript:** `{_safe(Path(session.path).name)}`",
+        f"- **Project:** `{_safe(session.cwd or 'unknown')}`",
         f"- **Blast tier:** {report.tier.value.upper()}",
         "",
         "## Irreversible & succeeded",
@@ -212,7 +277,7 @@ def render_markdown(report: BlastReport) -> str:
         lines += ["| Severity | Action | Why | Event |", "|---|---|---|---|"]
         for a in headlines:
             lines.append(
-                f"| {a.severity.value.upper()} | `{_md(a.target)}` "
+                f"| {a.severity.value.upper()} | `{_md(_redact(a.target))}` "
                 f"| {_md(a.detail)} | {a.event_index} |")
     else:
         lines.append("_None: nothing the agent did is unrecoverable._")
@@ -229,7 +294,7 @@ def render_markdown(report: BlastReport) -> str:
         for a in items:
             mark = "✓" if a.succeeded else "✗"
             lines.append(
-                f"| {mark} | {a.severity.value.upper()} | `{_md(a.target)}` "
+                f"| {mark} | {a.severity.value.upper()} | `{_md(_redact(a.target))}` "
                 f"| {a.reversibility.value} | {_md(a.detail)} | {a.event_index} |")
         lines.append("")
     return "\n".join(lines)

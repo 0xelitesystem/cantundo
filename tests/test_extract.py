@@ -162,3 +162,46 @@ def test_read_only_command_ignored(tmp_path):
     # git status is a vcs verb but maps to LOW/no special handling; ls is nothing.
     actions = _actions(p)
     assert all(a.category is not Category.SYSTEM for a in actions)
+
+
+def test_long_kube_line_does_not_stall_extraction():
+    """One agent command (or Read path) of repeated 'kube' with no 'config'
+    after it used to cost quadratic time in the secret-path matcher: about
+    6 s per call at 80 KB. It must stay linear; the bound here is generous."""
+    import time
+
+    from agent_blast_radius.models import Event, EventKind, Session
+    payload = "kube" * 20000  # 80 KB on one physical line
+    session = Session(path="long.jsonl", cwd="C:\\fake\\project", events=[
+        Event(kind=EventKind.TOOL_CALL, index=0, tool_name="Bash", tool_id="a",
+              tool_input={"command": "cat " + payload}),
+        Event(kind=EventKind.TOOL_CALL, index=1, tool_name="Read", tool_id="b",
+              tool_input={"file_path": "/tmp/" + payload}),
+    ])
+    start = time.perf_counter()
+    actions = extract_actions(session)
+    elapsed = time.perf_counter() - start
+    assert elapsed < 2.0, f"extraction took {elapsed:.2f}s on an 80 KB line"
+    assert not _by_cat(actions, Category.SECRETS)
+
+
+def test_kubeconfig_reads_still_flagged(tmp_path):
+    """The linear rewrite of the kubeconfig pattern keeps every usual shape."""
+    from tests.conftest import assistant_tool, bash, tool_result, write_jsonl
+    commands = [
+        "cat ~/.kube/config",
+        "cat kubeconfig.yaml",
+        "cat admin-kubeconfig",
+        "type C:\\Users\\dev\\.kube\\config",
+        "cat ~/.kube/clusters/prod-eu-west-1/config",
+    ]
+    records = []
+    for i, cmd in enumerate(commands):
+        records += [bash(f"b{i}", cmd), tool_result(f"b{i}", "apiVersion: v1")]
+    records += [
+        assistant_tool("r1", "Read", {"file_path": "C:\\Users\\dev\\.kube\\config"}),
+        tool_result("r1", "apiVersion: v1"),
+    ]
+    p = write_jsonl(tmp_path / "kube.jsonl", records)
+    secrets = _by_cat(_actions(p), Category.SECRETS)
+    assert len(secrets) == len(commands) + 1

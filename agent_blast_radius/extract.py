@@ -66,9 +66,11 @@ _PKG_INSTALL_WORDS = ("install", "add", "get")
 _GLOBAL_FLAGS = ("-g", "--global", "--system", "sudo")
 
 # Secrets surface: reading credential material.
+# The kubeconfig gap is bounded ({0,64}, not .*): an unbounded gap made a long
+# line of repeated "kube" with no "config" cost quadratic time.
 _SECRET_NAME_RE = re.compile(
     r"(\.env|\.envrc|credentials|secret|\.pem|\.key|id_rsa|id_ed25519|"
-    r"\.aws/|\.ssh/|\.netrc|token|\.pgpass|kube.*config|\.npmrc)",
+    r"\.aws/|\.ssh/|\.netrc|token|\.pgpass|kube.{0,64}config|\.npmrc)",
     re.IGNORECASE)
 _READ_CMDS = ("cat", "type", "less", "more", "head", "tail", "Get-Content", "gc")
 
