@@ -1,4 +1,4 @@
-"""Data models for agent-blast-radius.
+"""Data models for cantundo.
 
 The forensic pipeline reasons about a few shapes: a Session is an ordered
 list of Events (assistant text or tool calls) parsed from the transcript;

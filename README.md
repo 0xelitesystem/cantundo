@@ -1,8 +1,10 @@
-# agent-blast-radius
+# cantundo
 
 > Your agent finished. **What did it actually touch, and what can't you take back?**
 
-`blast-radius` reads an AI coding agent's session transcript *after the fact* and reconstructs every side effect it had: the files it created, modified, and deleted; the commits it pushed; the data it sent over the network; the packages it installed; the destructive shell it ran. Then it answers the one question that matters when something went wrong: **which of those actions are irreversible, and did they actually succeed?**
+Formerly agent-blast-radius. The old repository address redirects here. The old `blast-radius` command still works in 0.2.0 with a notice and goes away in the next release; use `cantundo`.
+
+`cantundo` reads an AI coding agent's session transcript *after the fact* and reconstructs every side effect it had: the files it created, modified, and deleted; the commits it pushed; the data it sent over the network; the packages it installed; the destructive shell it ran. Then it answers the one question that matters when something went wrong: **which of those actions are irreversible, and did they actually succeed?**
 
 It's a forensic report, not a live monitor. There's nothing to install ahead of time, no daemon, no wrapper around your shell. You point it at the transcript you already have, the JSONL Claude Code wrote to `~/.claude/projects/`, and it tells you the blast radius.
 
@@ -12,7 +14,7 @@ Zero dependencies. Pure Python stdlib. Works offline, no API keys, nothing leave
 
 Agents now run unattended and act fast. You hand one a task, step away, and come back to a finished session and a vague worry: *what did it do while I wasn't looking?* Scrolling a thousand-line transcript to find the one `git push --force` or the one `curl --data @secrets.json` is exactly the kind of needle-in-a-haystack review nobody does carefully at 11pm during an incident.
 
-Existing tooling is built for *before*: sandboxes, permission prompts, allow-lists, live audit logs you have to set up in advance. None of that helps when the thing already happened and all you have is the transcript. **agent-blast-radius is retroactive**, it reconstructs the damage from the record you already kept, the same way an incident responder reads logs after the breach.
+Existing tooling is built for *before*: sandboxes, permission prompts, allow-lists, live audit logs you have to set up in advance. None of that helps when the thing already happened and all you have is the transcript. **cantundo is retroactive**, it reconstructs the damage from the record you already kept, the same way an incident responder reads logs after the breach.
 
 The distinction that drives the whole report: **reversibility**. An edit is `ctrl-Z`. A local commit is `git reset`. But a push to a shared remote, a force-push that rewrites history, a `DELETE FROM`, data egressed to a webhook, those are gone. The report leads with that set and nothing else.
 
@@ -21,7 +23,7 @@ The distinction that drives the whole report: **reversibility**. An edit is `ctr
 That's a real report of [`examples/demo-session.jsonl`](examples/demo-session.jsonl), an agent that edited three files, installed a package, committed, **force-pushed to origin**, recursively deleted `build/`, and **POSTed data to a webhook**:
 
 ```
-  agent-blast-radius, what did this agent touch, and what's irreversible?
+  cantundo, what did this agent touch, and what's irreversible?
   session demo-session  -  10 events  -  /home/dev/acme-api
 
   BLAST TIER  CRITICAL
@@ -55,13 +57,13 @@ That's a real report of [`examples/demo-session.jsonl`](examples/demo-session.js
 Run it yourself:
 
 ```bash
-blast-radius report examples/demo-session.jsonl
+cantundo report examples/demo-session.jsonl
 ```
 
 ## Install
 
 ```bash
-pip install git+https://github.com/0xelitesystem/agent-blast-radius
+pip install git+https://github.com/0xelitesystem/cantundo
 ```
 
 Python ≥ 3.10. No dependencies.
@@ -70,25 +72,25 @@ Python ≥ 3.10. No dependencies.
 
 ```bash
 # Reconstruct your most recent Claude Code session
-blast-radius report latest
+cantundo report latest
 
 # A specific session by id prefix, or any transcript path
-blast-radius report 8dcbd9b2
-blast-radius report ~/.claude/projects/<project>/<session>.jsonl
+cantundo report 8dcbd9b2
+cantundo report ~/.claude/projects/<project>/<session>.jsonl
 
 # List recent sessions across all projects
-blast-radius list
+cantundo list
 
 # Machine-readable output / Markdown report
-blast-radius report latest --json
-blast-radius report latest --md report.md
+cantundo report latest --json
+cantundo report latest --md report.md
 
 # Focus on one surface, or hide the noise
-blast-radius report latest --only vcs
-blast-radius report latest --danger-min high
+cantundo report latest --only vcs
+cantundo report latest --danger-min high
 
 # CI / automation gate: exit 1 if anything irreversible AND critical landed
-blast-radius report latest --fail-on-critical
+cantundo report latest --fail-on-critical
 ```
 
 ## What it tracks
@@ -134,10 +136,10 @@ The single most important rule: **an action that did not succeed had no side eff
 
 ## Part of a suite
 
-agent-blast-radius is one of three tools that read the same Claude Code transcript from different angles:
+cantundo is one of three tools that read the same Claude Code transcript from different angles:
 
-- **[agent-receipts](https://github.com/0xelitesystem/agent-receipts)**, did the agent's *claims* ("all tests pass") match what it did?
-- **agent-blast-radius** (this one), what did it *touch*, and what's irreversible?
+- **[donediff](https://github.com/0xelitesystem/donediff)**, did the agent's *claims* ("all tests pass") match what it did?
+- **cantundo** (this one), what did it *touch*, and what's irreversible?
 - **agent-leaks**, what *secrets* did it read or surface? (The secrets-exposure rows here are the seam; agent-leaks goes deep on that surface.)
 
 They share a parser and a mental model, so the same `latest` transcript answers all three questions.
@@ -151,28 +153,28 @@ They share a parser and a mental model, so the same `latest` transcript answers 
 
 ## Part of the agent accountability suite
 
-- [agent-receipts](https://github.com/0xelitesystem/agent-receipts), did the agent's claims ("tests pass") match reality?
+- [donediff](https://github.com/0xelitesystem/donediff), did the agent's claims ("tests pass") match reality?
 - [agent-leaks](https://github.com/0xelitesystem/agent-leaks), did it leak secrets into the transcript?
-- **agent-blast-radius**, what irreversible actions did it take?
-- [agent-rules](https://github.com/0xelitesystem/agent-rules), did it follow your `CLAUDE.md`?
+- **cantundo**, what irreversible actions did it take?
+- [rulediff](https://github.com/0xelitesystem/rulediff), did it follow your `CLAUDE.md`?
 - [agent-cost](https://github.com/0xelitesystem/agent-cost), where did the tokens and money go?
 
 ## Roadmap
 
 - [ ] Adapters for other agents that persist transcripts (Codex CLI, OpenCode, Gemini CLI)
-- [ ] Suite integration: one command that runs agent-receipts + agent-blast-radius + agent-leaks over `latest` and prints a combined incident card
-- [ ] `blast-radius diff <a> <b>`, what changed in the blast radius between two runs of the same task
+- [ ] Suite integration: one command that runs donediff + cantundo + agent-leaks over `latest` and prints a combined incident card
+- [ ] `cantundo diff <a> <b>`, what changed in the blast radius between two runs of the same task
 - [ ] Claude Code Stop-hook integration: auto-report every session, alert on CRITICAL
 - [ ] Resolve `./script.sh` invocations against the repo to recover side effects inside scripts
 
 ## Development
 
 ```bash
-git clone https://github.com/0xelitesystem/agent-blast-radius
-cd agent-blast-radius
+git clone https://github.com/0xelitesystem/cantundo
+cd cantundo
 pip install -e .[dev]
 pytest
-python examples/make_demo.py && blast-radius report examples/demo-session.jsonl
+python examples/make_demo.py && cantundo report examples/demo-session.jsonl
 ```
 
 ## More

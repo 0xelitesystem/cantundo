@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from agent_blast_radius.classify import analyze, compute_tier
-from agent_blast_radius.models import (
+from cantundo.classify import analyze, compute_tier
+from cantundo.models import (
     BlastTier,
     FileOp,
     Reversibility,
     Severity,
 )
-from agent_blast_radius.parser import parse_transcript
+from cantundo.parser import parse_transcript
 
 
 def _report(path):

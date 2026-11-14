@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 
-from agent_blast_radius.classify import analyze
-from agent_blast_radius.cli import main
-from agent_blast_radius.parser import parse_transcript
-from agent_blast_radius.report import render_json, render_markdown, render_terminal
+from cantundo.classify import analyze
+from cantundo.cli import main
+from cantundo.parser import parse_transcript
+from cantundo.report import render_json, render_markdown, render_terminal
 
 
 def _report(path):
@@ -38,7 +38,7 @@ def test_json_is_valid_and_complete(destructive_transcript):
 
 def test_markdown_has_sections(critical_transcript):
     md = render_markdown(_report(critical_transcript))
-    assert "# agent-blast-radius report" in md
+    assert "# cantundo report" in md
     assert "Irreversible & succeeded" in md
 
 
@@ -108,7 +108,7 @@ def test_cli_md_writes_file(benign_transcript, tmp_path, capsys):
     capsys.readouterr()
     assert rc == 0
     assert out_md.exists()
-    assert "agent-blast-radius report" in out_md.read_text(encoding="utf-8")
+    assert "cantundo report" in out_md.read_text(encoding="utf-8")
 
 
 def test_cli_missing_target_exits_2(capsys):
@@ -122,7 +122,7 @@ def test_cli_version(capsys):
     with pytest.raises(SystemExit) as exc:
         main(["--version"])
     assert exc.value.code == 0
-    assert "blast-radius" in capsys.readouterr().out
+    assert "cantundo" in capsys.readouterr().out
 
 
 # --- untrusted transcript text: terminal control characters ----------------

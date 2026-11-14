@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from agent_blast_radius.extract import extract_actions
-from agent_blast_radius.models import Category, FileOp, Reversibility, Severity
-from agent_blast_radius.parser import parse_transcript
+from cantundo.extract import extract_actions
+from cantundo.models import Category, FileOp, Reversibility, Severity
+from cantundo.parser import parse_transcript
 
 
 def _actions(path):
@@ -170,7 +170,7 @@ def test_long_kube_line_does_not_stall_extraction():
     6 s per call at 80 KB. It must stay linear; the bound here is generous."""
     import time
 
-    from agent_blast_radius.models import Event, EventKind, Session
+    from cantundo.models import Event, EventKind, Session
     payload = "kube" * 20000  # 80 KB on one physical line
     session = Session(path="long.jsonl", cwd="C:\\fake\\project", events=[
         Event(kind=EventKind.TOOL_CALL, index=0, tool_name="Bash", tool_id="a",

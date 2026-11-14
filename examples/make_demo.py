@@ -9,7 +9,7 @@ Run it as:
 
 then point the tool at it:
 
-    blast-radius report examples/demo-session.jsonl
+    cantundo report examples/demo-session.jsonl
 """
 
 from __future__ import annotations

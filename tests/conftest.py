@@ -1,6 +1,6 @@
 """Fixture transcripts built in Claude Code's JSONL shape.
 
-Same builders as agent-receipts so the suites share a mental model: a session
+Same builders as donediff so the suites share a mental model: a session
 is a flat list of assistant/user records, tool calls paired to results by id.
 The cwd here is C:\\fake\\project so path-escape tests have a stable base.
 """

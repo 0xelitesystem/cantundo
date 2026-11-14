@@ -1,8 +1,8 @@
-"""blast-radius: reconstruct what an agent session touched, from the transcript.
+"""cantundo: reconstruct what an agent session touched, from the transcript.
 
 Usage:
-  blast-radius report <transcript.jsonl | session-id-prefix | latest> [options]
-  blast-radius list [--project NAME] [--limit N]
+  cantundo report <transcript.jsonl | session-id-prefix | latest> [options]
+  cantundo list [--project NAME] [--limit N]
 
 Options:
   --project NAME       only consider transcripts whose project folder matches
@@ -74,7 +74,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
     try:
         report = analyze_transcript(args.target, args.project)
     except FileNotFoundError as exc:
-        print(f"blast-radius: {exc}", file=sys.stderr)
+        print(f"cantundo: {exc}", file=sys.stderr)
         return 2
 
     view = _filtered(report, args.only, args.danger_min)
@@ -112,12 +112,12 @@ def _cmd_list(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="blast-radius",
+        prog="cantundo",
         description="Reconstruct what an agent session touched, and what's "
                     "irreversible, from its transcript.",
     )
     parser.add_argument("--version", action="version",
-                        version=f"blast-radius {__version__}")
+                        version=f"cantundo {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     rep = sub.add_parser("report", help="analyze one session transcript")
@@ -156,6 +156,13 @@ def main(argv: list[str] | None = None) -> int:
                 pass
     args = build_parser().parse_args(argv)
     return args.func(args)
+
+
+def deprecated_main():
+    """The old `blast-radius` command. Kept for one release, then removed."""
+    import sys as _sys
+    print("`blast-radius` is now `cantundo`. The old command goes away in the next release.", file=_sys.stderr)
+    return main()
 
 
 if __name__ == "__main__":

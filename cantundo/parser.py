@@ -1,6 +1,6 @@
 """Parse Claude Code session transcripts (JSONL) into a Session.
 
-Vendored, identical in shape to agent-receipts' parser so the suite shares
+Vendored, identical in shape to donediff' parser so the suite shares
 one mental model. Format notes (observed against Claude Code 2.x transcripts):
 - Each line is a JSON object with a top-level "type".
 - "assistant" records carry message.content: a list of blocks, where

@@ -159,7 +159,7 @@ def render_terminal(report: BlastReport, color: bool | None = None) -> str:
 
     title = session.slug or Path(session.path).stem[:12]
     out("")
-    out(_paint("  agent-blast-radius", _BOLD, _CYAN, enabled=color)
+    out(_paint("  cantundo", _BOLD, _CYAN, enabled=color)
         + _paint(": what did this agent touch, and what's irreversible?",
                  _DIM, enabled=color))
     out(_paint(f"  session {_safe(title)} · {len(session.events)} events"
@@ -263,7 +263,7 @@ def render_json(report: BlastReport) -> str:
 def render_markdown(report: BlastReport) -> str:
     session = report.session
     lines = [
-        "# agent-blast-radius report",
+        "# cantundo report",
         "",
         f"- **Transcript:** `{_safe(Path(session.path).name)}`",
         f"- **Project:** `{_safe(session.cwd or 'unknown')}`",

@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agent-blast-radius"
-version = "0.1.0"
+name = "cantundo"
+version = "0.2.0"
 description = "Reconstruct what an agent session touched, and what's irreversible, from its transcript."
 readme = "README.md"
 license = "MIT"
@@ -24,11 +24,12 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/0xelitesystem/agent-blast-radius"
-Issues = "https://github.com/0xelitesystem/agent-blast-radius/issues"
+Homepage = "https://github.com/0xelitesystem/cantundo"
+Issues = "https://github.com/0xelitesystem/cantundo/issues"
 
 [project.scripts]
-blast-radius = "agent_blast_radius.cli:main"
+cantundo = "cantundo.cli:main"
+blast-radius = "cantundo.cli:deprecated_main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
