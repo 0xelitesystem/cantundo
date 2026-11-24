@@ -154,10 +154,10 @@ They share a parser and a mental model, so the same `latest` transcript answers 
 ## Part of the agent accountability suite
 
 - [donediff](https://github.com/0xelitesystem/donediff), did the agent's claims ("tests pass") match reality?
-- [agent-leaks](https://github.com/0xelitesystem/agent-leaks), did it leak secrets into the transcript?
+- [agent-transcript-redactor](https://github.com/0xelitesystem/agent-transcript-redactor), did it leak secrets into the transcript?
 - **cantundo**, what irreversible actions did it take?
 - [rulediff](https://github.com/0xelitesystem/rulediff), did it follow your `CLAUDE.md`?
-- [agent-cost](https://github.com/0xelitesystem/agent-cost), where did the tokens and money go?
+- [agent-spend-retrospective](https://github.com/0xelitesystem/agent-spend-retrospective), where did the tokens and money go?
 
 ## Roadmap
 
